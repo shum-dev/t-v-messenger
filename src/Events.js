@@ -1,0 +1,9 @@
+// common events for server and client sides
+module.exports = {
+  FETCH_USER_DATA: 'FETCH_USER_DATA',
+  ROOM_ACCESS: 'ROOM_ACCESS',
+  CREATE_NEW_ROOM: 'CREATE_NEW_CHAT',
+  CREATE_NEW_MESSAGE: 'CREATE_NEW_MESSAGE',
+  ADD_NEW_MESSAGE: 'ADD_NEW_MESSAGE',
+  VERIFY_USER:'VERIFY_USER',
+}

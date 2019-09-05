@@ -1,0 +1,20 @@
+.LoginForm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.LoginForm-error {
+  color: red;
+}
+.LoginForm-button{
+  margin-top: 5px;
+  width: 15em;
+}
+
+.LoginForm-spinner{
+  line-height: 100vh;
+  text-align: center;
+}

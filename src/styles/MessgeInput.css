@@ -1,0 +1,11 @@
+.MessageInput {
+  display: flex;
+}
+
+.MessageInput-button {
+  /* flex-grow: 1; */
+}
+
+.MessageInput-input {
+  flex-grow: 1;
+}

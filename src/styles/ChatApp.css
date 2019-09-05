@@ -1,0 +1,9 @@
+.Layout-error {
+  color: red;
+  text-align: center;
+  line-height: 100vh;
+}
+.Layout-spinner {
+  line-height: 100vh;
+  text-align: center;
+}

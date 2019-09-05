@@ -1,0 +1,28 @@
+.ChatContainer {
+  display: flex;
+  height: 100vh;
+  padding: 5px;
+}
+
+.chat-room-container {
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 5px;
+}
+
+.chat-room {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.chat-room.choose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-room.choose h1 {
+  color:  rgb(159, 162, 165)
+}

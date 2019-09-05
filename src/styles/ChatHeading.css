@@ -1,0 +1,24 @@
+.ChatHeading {
+  /* border: 1px solid black; */
+  border-radius: 10px;
+  height: 150px;
+  padding: 5px;
+  background: rgba(206, 211, 216, 0.589);
+  text-align: center;
+
+}
+
+.ChatHeading-info {
+  width: 100%;
+}
+.ChatHeading-options * {
+  margin: 5px;
+}
+
+li.active.breadcrumb-item {
+  color: #3B52FA;
+}
+
+ol.breadcrumb {
+  background: transparent;
+}

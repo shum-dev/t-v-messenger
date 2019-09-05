@@ -1,0 +1,78 @@
+.Messages {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.Messages-log {
+  overflow: auto;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.right {
+  align-self: flex-end;
+}
+
+.Messages-msg-conteiner {
+  margin-bottom: 5px;
+  width: fit-content;
+  max-width: 50%;
+}
+
+.Messages-msg-conteiner .data {
+  position: relative;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.Messages-msg-conteiner:not(.right) .data {
+  background-color: #E2E5E8;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.Messages-msg-conteiner:not(.right) .sender {
+  display: block;
+  left: 0;
+  bottom: -25px;
+}
+.Messages-msg-conteiner:not(.right) .time {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) translateX(120%);
+  right: 0;
+}
+
+.Messages-msg-conteiner.right .data{
+  background-color: #92b3fe;
+  border-radius: 10px;
+}
+
+.Messages-msg-conteiner.right .sender {
+  display: block;
+}
+
+.Messages-msg-conteiner.right .time {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) translateX(-120%);
+  left: 0;
+}
+
+.sender {
+  color:grey;
+  width: fit-content;
+}
+
+.right .sender {
+  margin-left: auto;
+}
+.msg {
+  overflow-wrap: break-word;
+}

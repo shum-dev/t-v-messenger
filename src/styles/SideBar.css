@@ -1,0 +1,61 @@
+.SideBar {
+  min-width: 250px;
+  width: 30vw;
+  padding: 5px;
+  border-right: 2px solid rgb(206, 211, 216);;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.SideBar-button {
+  margin-bottom: 5px;
+  width: 100%;
+}
+.SideBar-form .SideBar-button {
+  width: 100%;
+}
+.SideBar-form input {
+  width: 100%;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  border: 1px solid rgb(133, 133, 133);
+  box-shadow: none;
+  background-color: transparent;
+  padding: 3px;
+}
+.SideBar-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px;
+}
+.SideBar-error {
+  text-align: center;
+  margin: auto;
+  color: red;
+}
+.current-user{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 7px;
+  background: rgba(206, 211, 216, 0.589);
+}
+.SideBar .list-group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.list-group-item .badge {
+  font-size: 0.9em;
+  background: rgba(161, 164, 168, 0.774);
+  color: white
+}
+
+li.active.list-group-item {
+  background: #3B52FA;
+}
