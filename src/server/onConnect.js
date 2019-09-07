@@ -1,7 +1,7 @@
 const io = require('./index').io;
 const db = require('./models');
 const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
-        ADD_NEW_MESSAGE, ROOM_ACCESS, FETCH_USER_DATA} = require('../Events');
+        ADD_NEW_MESSAGE, ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE} = require('../Events');
 
 // Create generic room for all users
 (async function initGenericRoom(){
@@ -36,10 +36,11 @@ module.exports = function(socket){
           socket.join(room.id);
         });
         callback({user: foundUser});
-      }
+      } else {
         callback({user: null});
+      }
     } catch(err) {
-      console.log('Something gous wrong in FETCH_USER_DATA ', err);
+      console.log('Something goes wrong in FETCH_USER_DATA ', err);
     }
   });
   // veryfy if passed-in user exist
@@ -194,6 +195,12 @@ module.exports = function(socket){
       let error = 'Invalid room URL';
       callback(null, null, error);
     }
+  });
+
+  socket.on(UNSUBSCRIBE, ()=>{
+    let rooms = Object.keys(socket.rooms);
+    console.log('Rooms socket leaves: ',rooms);
+    rooms.forEach(item => socket.leave(item));
   });
 
   socket.on('disconnect', () => {

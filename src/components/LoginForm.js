@@ -28,7 +28,7 @@ export default class LoginForm extends Component {
 
   setUser = ({user, error}) => {
     if(error) {
-      this.setState({error});
+      this.setState({error, inload: false});
     } else {
       this.setState({error: '', inLoad: false});
       this.props.logIn(user);

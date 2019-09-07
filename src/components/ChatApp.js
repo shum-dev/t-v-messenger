@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { withRouter, Switch, Route, Redirect} from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import ChatContainer from './ChatContainer';
-import { ROOM_ACCESS, FETCH_USER_DATA } from '../Events';
+import { ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE } from '../Events';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/ChatApp.css';
@@ -40,27 +40,29 @@ class ChatApp extends Component {
     window.localStorage.setItem('ChatUser', user.name);
   }
   logOut = () => {
-    this.setState({user: null});
+    socket.emit(UNSUBSCRIBE, this.state.user.name);
     window.localStorage.removeItem('ChatUser');
+    this.setState({user: null});
   }
   // when user tries to access the roomID
   handleRoute = (routeProps) => {
-    const id = routeProps.match.params.id;
+    const roomId = routeProps.match.params.id;
     const { user } = this.state;
     if(user){
-      const foundedRoom = user.rooms.filter(item => item._id === id)[0];
-      if(foundedRoom){ // if user already join this room redirect to ChatContainer
+      const foundedRoom = user.rooms.filter(item => item._id === roomId)[0];
+      if(foundedRoom){ // if user already join this room render ChatContainer and
         return <ChatContainer
                   {...routeProps}
                   socket={socket}
                   user={user}
                   logOut={this.logOut}
                   logIn={this.logIn}
-                  activeChat={foundedRoom} // set activeChat
+                  activeChat={foundedRoom} // ... set proper activeChat
                 />
       }
       // request to DB for handle room access
-      socket.emit(ROOM_ACCESS, id, user.name, this.handleRoomAccess)
+      socket.emit(ROOM_ACCESS, roomId, user.name, this.handleRoomAccess)
+      this.setState({inLoad: true});
     } else {
       return <Redirect to='/'/>
     }
@@ -68,7 +70,7 @@ class ChatApp extends Component {
   // ROOM_ACCESS callback
   handleRoomAccess = (res, roomId, error) => {
     if(error) { // show error for 2 sec then redirect to root
-      return this.setState({error: error}, () => {
+      return this.setState({error: error, inLoad: false}, () => {
         setTimeout(()=>{
           this.props.history.push('/');
           this.setState({error: ''});
@@ -76,7 +78,7 @@ class ChatApp extends Component {
       });
     }
     // if not error set resieved user in state the redirect to roomID
-    this.setState({ user: res }, () => {
+    this.setState({ user: res, inLoad: false }, () => {
       this.props.history.push(`/${roomId}`);
     });
   }

@@ -1,5 +1,6 @@
 // common events for server and client sides
 module.exports = {
+  UNSUBSCRIBE: 'UNSUBSCRIBE',
   FETCH_USER_DATA: 'FETCH_USER_DATA',
   ROOM_ACCESS: 'ROOM_ACCESS',
   CREATE_NEW_ROOM: 'CREATE_NEW_CHAT',

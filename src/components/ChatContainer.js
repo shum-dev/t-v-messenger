@@ -35,12 +35,15 @@ export default class ChatContainer extends Component {
   // update current state with recieved data from server
   updateCurrentChatsInState = (updatedRoom) => {
     const { chats } = this.state;
+    const { user, logIn } = this.props;
     let newChats = chats.map( chat => {
       if(chat._id === updatedRoom._id){
         return updatedRoom;
       }
       return chat;
     });
+    let updatedUser = {...user, rooms: newChats};
+    logIn(updatedUser); // call .logIn() just for sync purpose
     this.setState((prevState) =>{
       if(prevState.activeChat && (prevState.activeChat._id === updatedRoom._id)){
         return ({
