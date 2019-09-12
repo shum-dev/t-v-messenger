@@ -8,7 +8,7 @@ import { ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE } from '../Events';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/ChatApp.css';
 
-const socketUrl = 'http://192.168.1.4:3231';
+const socketUrl = 'http://192.168.1.2:3231';
 
 let socket;
 

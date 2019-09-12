@@ -17,8 +17,8 @@ export default class Messages extends Component {
   render() {
     const { messages, user } = this.props;
     return (
-      <div className='Messages' >
-        <div className='Messages-log' ref='container'>
+      <div className='Messages' ref='container' >
+        <div className='Messages-log' >
             {
               messages.map((msg, indx, arr) => (
                 <div
