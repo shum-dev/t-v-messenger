@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import SideBar from './SideBar';
-import ChatHeading from './ChatHeading';
-import Messages from './Messages';
-import MessageInput from './MessageInput';
 import LoginForm from './LoginForm';
+import Room from './Room';
 import { CREATE_NEW_ROOM, CREATE_NEW_MESSAGE, ADD_NEW_MESSAGE, ROOM_ACCESS } from '../Events';
 
 import '../styles/ChatContainer.css';
@@ -99,26 +97,14 @@ export default class ChatContainer extends Component {
             activeChat={activeChat}
             setActiveChat={this.setActiveChat}
           />
-          <div className='chat-room-container'>
-            {
-              activeChat ? (
-                <div className='chat-room'>
-                  <ChatHeading activeChat={{...activeChat}} user={user.name} />
-                  <Messages
-                    messages={activeChat.messages}
-                    user={user}
-                  />
-                  <MessageInput
-                    sendMessage={this.createMessage}
-                  />
-                </div>
-              ) : (
-                <div className='chat-room choose'>
-                  <h1>Choose a chat!</h1>
-                </div>
-              )
-            }
-          </div>
+          {activeChat ? (
+            <Room activeChat={activeChat} user={user} createMessage={this.createMessage} />
+          ) : (
+            <div className='ChatContainer choose'>
+              <h1>Choose a chat!</h1>
+            </div>
+          )}
+
         </div>
       )
     }

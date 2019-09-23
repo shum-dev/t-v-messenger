@@ -28,7 +28,6 @@ export default class SideBar extends Component {
     return (
       <div
         className='SideBar'
-        onClick={({target}) => (target.class !== 'name' && target.id !== 'search') && setActiveChat(null)}
       >
         <div>
               <form className='SideBar-form' onSubmit={this.handleSubmit}>

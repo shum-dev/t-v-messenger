@@ -4,25 +4,12 @@
   padding: 5px;
 }
 
-.chat-room-container {
-  width: 100%;
-  margin-bottom: 15px;
-  padding: 5px;
-}
-
-.chat-room {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.chat-room.choose {
+.ChatContainer.choose {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
 }
-
-.chat-room.choose h1 {
+.ChatContainer.choose h1 {
   color:  rgb(159, 162, 165)
 }

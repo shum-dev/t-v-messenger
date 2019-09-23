@@ -8,9 +8,9 @@ export default class MessageInput extends Component {
     super(props);
     this.state = {
       message: '',
-      isTyping: false
     };
   }
+
   handleSubmit = (e) => {
     e.preventDefault();
     this.props.sendMessage(this.state.message);
@@ -38,6 +38,14 @@ export default class MessageInput extends Component {
               type = "submit"
             >
               Send
+            </Button>
+            <Button
+              className='MessageInput-button-broadcast'
+              // disabled = { message.length < 1 }
+              color = 'primary'
+
+            >
+              Broadcast
             </Button>
         </Form>
 
