@@ -10,7 +10,6 @@ export default class MessageInput extends Component {
       message: '',
     };
   }
-
   handleSubmit = (e) => {
     e.preventDefault();
     this.props.sendMessage(this.state.message);

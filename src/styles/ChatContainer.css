@@ -9,7 +9,10 @@
   align-items: center;
   justify-content: center;
   height: 100%;
+  width: 100%;
+
 }
 .ChatContainer.choose h1 {
-  color:  rgb(159, 162, 165)
+  color:  rgb(159, 162, 165);
+
 }
