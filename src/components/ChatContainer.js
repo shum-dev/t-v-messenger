@@ -22,7 +22,12 @@ export default class ChatContainer extends Component {
             setActiveChat={setActiveChat}
           />
           {activeChat ? (
-            <Room activeChat={activeChat} user={user} createMessage={createMessage} />
+            <Room
+              activeChat={activeChat}
+              user={user}
+              createMessage={createMessage}
+              socket={socket}
+            />
           ) : (
             <div className='ChatContainer choose'>
               <h1>Choose a chat!</h1>

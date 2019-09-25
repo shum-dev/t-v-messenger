@@ -4,7 +4,8 @@ import { withRouter, Switch, Route, Redirect} from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import ChatContainer from './ChatContainer';
 import { ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE, JOIN_ROOM,
-        CREATE_NEW_ROOM, CREATE_NEW_MESSAGE, ADD_NEW_MESSAGE } from '../Events';
+        CREATE_NEW_ROOM, CREATE_NEW_MESSAGE, ADD_NEW_MESSAGE,
+        EXIT_ROOM } from '../Events';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/ChatApp.css';
@@ -28,10 +29,11 @@ class ChatApp extends Component {
       socket.on('connect', () => {
         let userFromLocalStorage = window.localStorage.getItem('ChatUser');
         if(userFromLocalStorage){ // when connected check localstorage...
-          socket.emit(FETCH_USER_DATA, // ... fetch data if there is user in localStorage
-                       userFromLocalStorage, // after .setState() set loader to false
+          socket.emit(FETCH_USER_DATA, // ... fetch data if there is user in localStorage + activeChat
+                       userFromLocalStorage,
                        this.props.location.pathname.slice(1),
-                       (x) => this.setState(x, () => {this.setState({inLoad: false})}));
+                       (x) => this.setState(x,
+                        () => {this.setState({inLoad: false})})); // after .setState() set loader to false
         } else {
           console.log("Nothing in localStorage!");
         }
@@ -72,6 +74,9 @@ class ChatApp extends Component {
   }
   setActiveChat = (activeChat) => {
     this.setState({activeChat});
+    let currentURL = this.props.location.pathname.slice(1);
+    console.log('CURRENT URL: ', currentURL);
+    socket.emit(EXIT_ROOM, { roomId: currentURL }, ()=>{});
     this.props.history.push(`/${activeChat._id}`);
   }
   // create message on server-side
@@ -98,6 +103,7 @@ class ChatApp extends Component {
     if(user){
       const foundedRoom = user.rooms.filter(item => item._id === roomId)[0];
       if(foundedRoom){ // if user already join the room, add this user to usersOnline [] and broadcast to all
+        socket.emit(JOIN_ROOM, { roomId }, ()=>{})
         return (
           <ChatContainer
             {...routeProps}
@@ -139,6 +145,12 @@ class ChatApp extends Component {
     });
   }
   render() {
+    // this.props.history.listen((location, action) => {
+    //   console.log('Url changed: ');
+    //   console.log('Location: ', location);
+    //   console.log('Action: ', action);
+
+    // });
     const { user, error, inLoad } = this.state;
     if(error){
       return (

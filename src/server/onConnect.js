@@ -2,7 +2,7 @@ const io = require('./index').io;
 const db = require('./models');
 const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
         ADD_NEW_MESSAGE, ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE,
-        JOIN_ROOM } = require('../Events');
+        JOIN_ROOM, EXIT_ROOM } = require('../Events');
 
 // Create generic room for all users
 (async function initGenericRoom(){
@@ -15,7 +15,7 @@ const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
   } catch(ignore){}
 }());
 
-let ROOMS_ACTIVITY = {};
+let ROOMS_ACTIVITY;
 
 module.exports = function(socket){
   console.log(`Socket ID: ${socket.id} connected!`);
@@ -41,8 +41,6 @@ module.exports = function(socket){
         });
         // if there is a match roomID/URL path set active chat
         let foundChat = foundUser.rooms.filter(room => room.id === location)[0];
-        console.log('foundChat: ', foundChat);
-
         callback({user: foundUser, activeChat: foundChat});
       } else {
         callback({user: null});
@@ -160,7 +158,7 @@ module.exports = function(socket){
           path: 'rooms',
           populate: { path: 'users' }
         });
-        // an user don't enjoi it yet
+        // and user don't enjoi it yet
         if(room.users.some(item => item.name === userName)){
           callback(foundUser, roomId);
           return;
@@ -207,16 +205,31 @@ module.exports = function(socket){
 
   socket.on(JOIN_ROOM, ({ roomId }, cb) => {
     console.log('JOIN_ROOM fired');
-    if(ROOMS_ACTIVITY[roomId]){
-      ROOMS_ACTIVITY[roomId].push(socket.id);
+    if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]){
+      ROOMS_ACTIVITY[roomId].usersOnline.add(socket.id);
     } else {
-      ROOMS_ACTIVITY = {...ROOMS_ACTIVITY, [roomId]: [socket.id]}
+      ROOMS_ACTIVITY = {
+        ...ROOMS_ACTIVITY,
+        [roomId]: {
+          streamer: null,
+          usersOnline: new Set([socket.id])
+        }
+      }
     }
     console.log('ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
+    // broadcast to all subscribers in the room about new user online
+    let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline)
+    io.to(roomId).emit(JOIN_ROOM, onlineUsersArray);
+  });
 
-    cb({roomId, usersOnline: ROOMS_ACTIVITY[roomId] });
-    // broadcast to all subscribers about new user in room
-    io.to(roomId).emit(JOIN_ROOM, foundRoom);
+  socket.on(EXIT_ROOM, ({ roomId }, cb) => {
+    if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]) {
+      ROOMS_ACTIVITY[roomId].usersOnline.delete(socket.id);
+      console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
+      // broadcast to all subscribers in the room about user has been detachet
+      let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline)
+      io.to(roomId).emit(EXIT_ROOM, onlineUsersArray);
+    }
   });
 
   socket.on(UNSUBSCRIBE, ()=>{
@@ -227,5 +240,16 @@ module.exports = function(socket){
 
   socket.on('disconnect', () => {
     console.log(`Socket ${socket.id} disconnected!`);
+    let roomId;
+    if(ROOMS_ACTIVITY) {
+      for(let key in ROOMS_ACTIVITY){
+        if(ROOMS_ACTIVITY[key].usersOnline.delete(socket.id)){
+          roomId = key;
+        }
+      }
+      console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
+      // broadcast to all subscribers in the room about user has been detachet
+      io.to(roomId).emit(EXIT_ROOM, ROOMS_ACTIVITY[roomId].usersOnline);
+    }
   });
 }
