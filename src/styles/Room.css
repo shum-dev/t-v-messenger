@@ -2,6 +2,8 @@
   width: 100%;
   margin-bottom: 15px;
   padding: 5px;
+  /* border: 1px solid red; */
+  position: relative;
 }
 
 .Room-chat {
@@ -11,4 +13,31 @@
   justify-content: space-between;
 }
 
+.Room-stream {
+  /* background-color: gray; */
+  position: absolute;
+  bottom: 100px;
+  left: 10px;
+  right: 10px;
+  height: 200px;
+  display: flex;
+  justify-content: space-between;
+
+}
+
+.Room-stream #localVideo {
+  width: 50px;
+  border: 1px solid blue;
+  flex-basis: 200px;
+  flex-grow: 0;
+  flex-shrink: 1;
+}
+
+.Room-stream #remoteVideo {
+  width: 50px;
+  border: 1px solid red;
+  flex-basis: 200px;
+  flex-grow: 0;
+  flex-shrink: 1;
+}
 

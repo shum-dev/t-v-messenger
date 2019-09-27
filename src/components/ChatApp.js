@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import io from 'socket.io-client';
+import { socket, createConnection} from '../socketIO';
 import { withRouter, Switch, Route, Redirect} from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import ChatContainer from './ChatContainer';
@@ -9,10 +9,6 @@ import { ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE, JOIN_ROOM,
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/ChatApp.css';
-
-const socketUrl = 'http://192.168.1.3:3231';
-
-let socket;
 
 class ChatApp extends Component {
   constructor (props) {
@@ -25,7 +21,7 @@ class ChatApp extends Component {
       activeChat: null,
     };
     if(!socket) { // establish connection if required
-      socket = io(socketUrl);
+      createConnection();
       socket.on('connect', () => {
         let userFromLocalStorage = window.localStorage.getItem('ChatUser');
         if(userFromLocalStorage){ // when connected check localstorage...
@@ -99,7 +95,7 @@ class ChatApp extends Component {
   // when user tries to access the roomID
   handleRoute = (routeProps) => {
     const roomId = routeProps.match.params.id;
-    const { user, activeChat } = this.state;
+    const { user } = this.state;
     if(user){
       const foundedRoom = user.rooms.filter(item => item._id === roomId)[0];
       if(foundedRoom){ // if user already join the room, add this user to usersOnline [] and broadcast to all

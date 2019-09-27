@@ -2,7 +2,7 @@ const io = require('./index').io;
 const db = require('./models');
 const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
         ADD_NEW_MESSAGE, ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE,
-        JOIN_ROOM, EXIT_ROOM } = require('../Events');
+        JOIN_ROOM, EXIT_ROOM, SIGNAL, STREAMING } = require('../Events');
 
 // Create generic room for all users
 (async function initGenericRoom(){
@@ -245,11 +245,59 @@ module.exports = function(socket){
       for(let key in ROOMS_ACTIVITY){
         if(ROOMS_ACTIVITY[key].usersOnline.delete(socket.id)){
           roomId = key;
+          // broadcast to all subscribers in the room about user has been detached
+          let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline)
+          io.to(roomId).emit(EXIT_ROOM, onlineUsersArray);
         }
       }
       console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
-      // broadcast to all subscribers in the room about user has been detachet
-      io.to(roomId).emit(EXIT_ROOM, ROOMS_ACTIVITY[roomId].usersOnline);
     }
+  });
+
+  ////////////////////////// SIGNALS /////////////////////////////////////////
+  socket.on(SIGNAL, (message) =>{
+    switch(message.type) {
+      case 'video-offer':
+
+        console.log('Get a video offer:', message);
+        // sending private messages to target Socket
+        io.to(message.target).emit(SIGNAL, message);
+        break;
+      case 'answer':
+        io.to(message.target).emit(SIGNAL, message);
+        break;
+      case 'new-ice-candidate':
+        io.to(`${message.target}`).emit(SIGNAL, message);
+        break;
+      default:
+        console.log('No such event in signaling server');
+
+        // sendTo(connection, {
+        //   type: 'error',
+        //   message: 'Unrecognized command: ' + data.type
+        // });
+    }
+  });
+
+  socket.on(STREAMING, (user, activeChatId) => {
+    console.log('STREAMING: ', user, activeChatId);
+
+    // broadcast to all subscribers about streaming
+    switch(!!user){
+      case true:
+        if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[activeChatId]){
+          ROOMS_ACTIVITY[activeChatId].streamer = user;
+          socket.to(activeChatId).emit(STREAMING, user);
+        }
+        break;
+      case false:
+        console.log('STREAMING closing');
+        if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[activeChatId]){
+          ROOMS_ACTIVITY[activeChatId].streamer = null;
+          socket.to(activeChatId).emit(STREAMING, null);
+        }
+        break;
+    }
+
   });
 }
