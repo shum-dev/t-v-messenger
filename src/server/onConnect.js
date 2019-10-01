@@ -217,8 +217,12 @@ module.exports = function(socket){
     console.log('JOIN_ROOM fired: ');
     // add new online user to the room
     if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]){
+      if(ROOMS_ACTIVITY[roomId].usersOnline.has(socket.id)){
+        console.log('YOU ARE IN THE ROOM');
+        return;
+      }
       ROOMS_ACTIVITY[roomId].usersOnline.add(socket.id);
-    } else { // or create new room in ACTIVITY list
+    } else { // or create new room in ACTIVITY register
       ROOMS_ACTIVITY = {
         ...ROOMS_ACTIVITY,
         [roomId]: {
@@ -241,7 +245,6 @@ module.exports = function(socket){
       const streamerSocket = ROOMS_ACTIVITY[roomId].streamer.socketId;
       io.to(streamerSocket).emit(STREAM_REQEST, socket.id);
     }
-
   });
 
   socket.on(EXIT_ROOM, ({ roomId }) => {

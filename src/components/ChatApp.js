@@ -37,7 +37,7 @@ class ChatApp extends Component {
     }
   }
   componentDidMount(){
-    socket.on(ADD_NEW_MESSAGE, (updatedRoom) => {
+    socket.on(ADD_NEW_MESSAGE, updatedRoom => {
       this.updateCurrentChatsInState(updatedRoom);
     });
 
