@@ -3,7 +3,7 @@ import { withRouter } from 'react-router-dom';
 import ChatHeading from './ChatHeading';
 import Messages from './Messages';
 import MessageInput from './MessageInput';
-import { JOIN_ROOM, EXIT_ROOM, STREAMING, SIGNAL } from '../Events';
+import { JOIN_ROOM, EXIT_ROOM, STREAMING, SIGNAL, STREAM_REQEST, CLOSE_CONNECTION } from '../Events';
 // import adapter from 'webrtc-adapter';
 
 // import { getMediaStream, closeVideoCall, createPeerConnections, handleTrackEvent } from '../webRTC';
@@ -11,6 +11,7 @@ import { JOIN_ROOM, EXIT_ROOM, STREAMING, SIGNAL } from '../Events';
 import '../styles/Room.css';
 
 let peerConnection;
+let historyRemoveListener;
 
 class Room extends Component {
   constructor(props) {
@@ -23,19 +24,21 @@ class Room extends Component {
   }
 
   componentDidMount(){
-    const { socket, user } = this.props;
-    const { remoteVideo } = this.refs;
+    const { socket, user, history } = this.props;
+    const { remoteVideo, localVideo } = this.refs;
     console.log('Component ROOM mount! Socket is: ', socket.id);
 
-    socket.on(JOIN_ROOM, (usersOnline) => {
-      console.log('JOIN_ROOM fired. Data from the server: ', usersOnline);
+    historyRemoveListener = history.listen(this.historyHandler);
+
+    socket.on(JOIN_ROOM, (usersOnline, streamer) => {
+      console.log('JOIN_ROOM fired.');
       let filteredCurrentUser = usersOnline.filter(item => item !== socket.id);
       console.log('Users in state: ', filteredCurrentUser);
-
-      this.setState({usersOnline: filteredCurrentUser});
+      console.log('Streamer in state: ', streamer);
+      this.setState({usersOnline: filteredCurrentUser, streamer});
     });
 
-    socket.on(EXIT_ROOM, (usersOnline) => {
+    socket.on(EXIT_ROOM, usersOnline => {
       console.log('EXIT_ROOM fired. Data from the server: ', usersOnline);
       console.log('Socket ID: ', socket.id);
       let filteredCurrentUser = usersOnline.filter(item => item !== socket.id);
@@ -43,8 +46,7 @@ class Room extends Component {
       this.setState({usersOnline: filteredCurrentUser});
     });
 
-    socket.on(STREAMING, (streamer) => {
-      console.log('Recieved Streamer: ', user);
+    socket.on(STREAMING, streamer => {
       this.setState({streamer});
       if(!streamer) {
         console.log('Close remote video2');
@@ -58,7 +60,23 @@ class Room extends Component {
         remoteVideo.style.display = 'block';
       }
     });
+    socket.on(STREAM_REQEST, remoteSocket => {
+      console.log('STREAM_REQ is fired!');
+      console.log('Remote socket is: ', remoteSocket);
+      let peerConnection = this.createPeerConnections([remoteSocket])[0];
+      let localStream = localVideo.srcObject;
+      console.log('localStream is: ', localStream);
+      console.log('PeerConnection is: ', peerConnection);
 
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+      this.setState((prevState) => {
+        return {
+          peerConnections: [...prevState.peerConnections, peerConnection]
+        }
+      });
+    });
     socket.on(SIGNAL, message => {
       switch(message.type) {
         case 'video-offer':
@@ -95,6 +113,8 @@ class Room extends Component {
           console.log('#9 Answer is coming');
           console.log('Message is: ', message);
           peerConnection = this.state.peerConnections.filter(item => item.targetSocket === message.owner)[0];
+          console.log('Current state: ', JSON.stringify(this.state.peerConnections));
+
           console.log('#10 set remote description');
           peerConnection.setRemoteDescription(message.sdp)
           .catch(err => {
@@ -119,11 +139,51 @@ class Room extends Component {
       }
 
     });
+
+    socket.on(CLOSE_CONNECTION, socketId => {
+      const { peerConnections } = this.state;
+      console.log('Streamer recieve CLOSE_CONNECTION: ', socketId);
+      console.log('Connections in state: ', JSON.stringify(peerConnections));
+      const targetConnection = peerConnections.filter(connection => connection.targetSocket === socketId)[0];
+      this.closeVideoCall([targetConnection]);
+        // remove closed connection from the state
+      this.setState((prevState) => {
+        const filteredConnections = prevState.peerConnections.filter(connection => {
+          return connection.targetSocket !== socketId;
+        });
+        return {
+          peerConnections: filteredConnections
+        }
+      });
+  });
   }
   componentWillUnmount(){
     const { socket } = this.props;
     console.log('Room unmount');
     socket.removeAllListeners();
+    historyRemoveListener();
+  }
+  historyHandler = () => {
+    const { streamer } = this.state;
+    const { user, socket } = this.props;
+    const { remoteVideo } = this.refs;
+    // when streamer leave current url - end streaming
+    if(streamer && streamer._id === user._id) {
+      this.toggleStreaming();
+      return;
+    }
+    // when consumer leave current url - close certain peerConnection
+    if(streamer && streamer._id !== user._id){
+      if (remoteVideo.srcObject) {
+        remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+        remoteVideo.removeAttribute("src");
+        remoteVideo.removeAttribute("srcObject");
+        remoteVideo.style.display = 'none';
+      }
+      this.closeVideoCall([peerConnection]);
+      socket.emit(CLOSE_CONNECTION, peerConnection.targetSocket);
+      return;
+    }
   }
   createPeerConnections = (targetSockets) => {
     console.log('#2 Create Peer Conections');
@@ -148,10 +208,8 @@ class Room extends Component {
       pc.targetSocket = item;
       pConnections[i] = pc;
     });
-
     return pConnections;
   }
-
   handleNegotatiationNeededEvent = (event) => {
     const { socket } = this.props;
     console.log('#3 Negotiation needed is fired');
@@ -203,7 +261,16 @@ class Room extends Component {
       case 'failed':
       case 'disconnected':
         console.log('CLOSE CALL');
-        this.closeVideoCall([event.target]);
+        // this.closeVideoCall([event.target]);
+        // // remove closed connection from the state
+        // this.setState((prevState) => {
+        //   const filteredConnections = prevState.peerConnections.filter(connection => {
+        //     return connection !== event.target;
+        //   });
+        //   return {
+        //     peerConnections: filteredConnections
+        //   }
+        // });
         break;
       default:
         console.log('ICE Connection State: ', event.target.iceConnectionState);
@@ -249,7 +316,6 @@ class Room extends Component {
     }
     // closeVideoCall();
   }
-
   closeVideoCall(peerConnections) {
     console.log('Close videocall is invoked');
     peerConnections.forEach(connection => {
@@ -265,12 +331,12 @@ class Room extends Component {
       connection.close();
       connection = null;
     });
-
   }
-
   toggleStreaming = () => {
+    console.log('ToggleStreaming');
+
     const { usersOnline, peerConnections } = this.state;
-    const { localVideo, remoteVideo } = this.refs;
+    const { localVideo } = this.refs;
     const { user, socket, activeChat } = this.props;
     if(this.state.streamer){
       console.log('Fire close video call');
@@ -300,6 +366,7 @@ class Room extends Component {
   render() {
     const { streamer } = this.state;
     const { activeChat, user, createMessage } = this.props;
+
     return (
       <div className='Room'>
           <div className='Room-chat'>

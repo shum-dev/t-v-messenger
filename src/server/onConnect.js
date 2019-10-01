@@ -2,7 +2,8 @@ const io = require('./index').io;
 const db = require('./models');
 const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
         ADD_NEW_MESSAGE, ROOM_ACCESS, FETCH_USER_DATA, UNSUBSCRIBE,
-        JOIN_ROOM, EXIT_ROOM, SIGNAL, STREAMING } = require('../Events');
+        JOIN_ROOM, EXIT_ROOM, SIGNAL, STREAMING, STREAM_REQEST,
+        CLOSE_CONNECTION } = require('../Events');
 
 // Create generic room for all users
 (async function initGenericRoom(){
@@ -214,10 +215,10 @@ module.exports = function(socket){
 
   socket.on(JOIN_ROOM, ({ roomId }) => {
     console.log('JOIN_ROOM fired: ');
+    // add new online user to the room
     if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]){
-      console.log('we add ne online user to room: ', socket.id);
       ROOMS_ACTIVITY[roomId].usersOnline.add(socket.id);
-    } else {
+    } else { // or create new room in ACTIVITY list
       ROOMS_ACTIVITY = {
         ...ROOMS_ACTIVITY,
         [roomId]: {
@@ -226,17 +227,28 @@ module.exports = function(socket){
         }
       }
     }
-    console.log('ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
     // broadcast to all online subscribers in the room about new user online
+    // additionally send streamer too
     let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
     onlineUsersArray.forEach(item => {
       console.log('emit JOIN_ROOM for: ', item);
-      io.to(item).emit(JOIN_ROOM, onlineUsersArray);
+      io.to(item).emit(JOIN_ROOM, onlineUsersArray, ROOMS_ACTIVITY[roomId].streamer);
     });
+
+    if(ROOMS_ACTIVITY[roomId].streamer) {
+      console.log('There is a streamer in the room.');
+      // tell the streamer to create ne connection for me
+      const streamerSocket = ROOMS_ACTIVITY[roomId].streamer.socketId;
+      io.to(streamerSocket).emit(STREAM_REQEST, socket.id);
+    }
+
   });
 
   socket.on(EXIT_ROOM, ({ roomId }) => {
     if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]) {
+
+      if(ROOMS_ACTIVITY[roomId].streamer)
+
       ROOMS_ACTIVITY[roomId].usersOnline.delete(socket.id);
       console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
       // broadcast to all Online subscribers in the room about user has been detachet
@@ -331,7 +343,7 @@ module.exports = function(socket){
     if(!!streamer){
       if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[activeChatId]){
         let onlineUsersArray = Array.from(ROOMS_ACTIVITY[activeChatId].usersOnline);
-        ROOMS_ACTIVITY[activeChatId].streamer = streamer;
+        ROOMS_ACTIVITY[activeChatId].streamer = {...streamer, socketId: socket.id};
         onlineUsersArray.forEach(item => {
           console.log('emit STREAM for: ', item);
           io.to(item).emit(STREAMING, streamer);
@@ -349,5 +361,10 @@ module.exports = function(socket){
         });
       }
     }
+  });
+
+  socket.on(CLOSE_CONNECTION, (targetSocket) => {
+    console.log('Server recieve CLOSE_CONNECTION: ', targetSocket);
+    io.to(targetSocket).emit(CLOSE_CONNECTION, socket.id);
   });
 }

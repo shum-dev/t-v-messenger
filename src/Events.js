@@ -1,5 +1,7 @@
 // common events for server and client sides
 module.exports = {
+  CLOSE_CONNECTION: 'CLOSE_CONNECTION',
+  STREAM_REQEST: 'STREAM_REQEST',
   STREAMING: 'STREAMING',
   SIGNAL: 'SIGNAL',
   EXIT_ROOM: 'EXIT_ROOM',

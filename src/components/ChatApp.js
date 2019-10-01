@@ -98,7 +98,7 @@ class ChatApp extends Component {
     if(user){
       const foundedRoom = user.rooms.filter(item => item._id === roomId)[0];
       if(foundedRoom){ // if user already join the room, add this user to usersOnline [] and broadcast to all
-        socket.emit(JOIN_ROOM, { roomId })
+        socket.emit(JOIN_ROOM, { roomId });
         return (
           <ChatContainer
             {...routeProps}
