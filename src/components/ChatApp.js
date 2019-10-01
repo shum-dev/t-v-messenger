@@ -71,8 +71,7 @@ class ChatApp extends Component {
   setActiveChat = (activeChat) => {
     this.setState({activeChat});
     let currentURL = this.props.location.pathname.slice(1);
-    console.log('CURRENT URL: ', currentURL);
-    socket.emit(EXIT_ROOM, { roomId: currentURL }, ()=>{});
+    socket.emit(EXIT_ROOM, { roomId: currentURL });
     this.props.history.push(`/${activeChat._id}`);
   }
   // create message on server-side
@@ -99,7 +98,7 @@ class ChatApp extends Component {
     if(user){
       const foundedRoom = user.rooms.filter(item => item._id === roomId)[0];
       if(foundedRoom){ // if user already join the room, add this user to usersOnline [] and broadcast to all
-        socket.emit(JOIN_ROOM, { roomId }, ()=>{})
+        socket.emit(JOIN_ROOM, { roomId })
         return (
           <ChatContainer
             {...routeProps}
@@ -141,12 +140,6 @@ class ChatApp extends Component {
     });
   }
   render() {
-    // this.props.history.listen((location, action) => {
-    //   console.log('Url changed: ');
-    //   console.log('Location: ', location);
-    //   console.log('Action: ', action);
-
-    // });
     const { user, error, inLoad } = this.state;
     if(error){
       return (

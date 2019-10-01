@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withRouter } from 'react-router-dom';
 import ChatHeading from './ChatHeading';
 import Messages from './Messages';
 import MessageInput from './MessageInput';
@@ -22,12 +23,12 @@ class Room extends Component {
   }
 
   componentDidMount(){
-    const { socket } = this.props;
+    const { socket, user } = this.props;
     const { remoteVideo } = this.refs;
+    console.log('Component ROOM mount! Socket is: ', socket.id);
 
     socket.on(JOIN_ROOM, (usersOnline) => {
       console.log('JOIN_ROOM fired. Data from the server: ', usersOnline);
-      console.log('Socket ID: ', socket.id);
       let filteredCurrentUser = usersOnline.filter(item => item !== socket.id);
       console.log('Users in state: ', filteredCurrentUser);
 
@@ -42,17 +43,18 @@ class Room extends Component {
       this.setState({usersOnline: filteredCurrentUser});
     });
 
-    socket.on(STREAMING, (user) => {
-      console.log('Recieved STREAMING: ', user);
-      this.setState({streamer: user});
-      if(!user) {
+    socket.on(STREAMING, (streamer) => {
+      console.log('Recieved Streamer: ', user);
+      this.setState({streamer});
+      if(!streamer) {
+        console.log('Close remote video2');
         if (remoteVideo.srcObject) {
           remoteVideo.srcObject.getTracks().forEach(track => track.stop());
           remoteVideo.removeAttribute("src");
           remoteVideo.removeAttribute("srcObject");
           remoteVideo.style.display = 'none';
         }
-      } else {
+      } else if(user._id !== streamer._id ) { // display remote video if current user !== streamer
         remoteVideo.style.display = 'block';
       }
     });
@@ -118,7 +120,11 @@ class Room extends Component {
 
     });
   }
-
+  componentWillUnmount(){
+    const { socket } = this.props;
+    console.log('Room unmount');
+    socket.removeAllListeners();
+  }
   createPeerConnections = (targetSockets) => {
     console.log('#2 Create Peer Conections');
 
@@ -148,7 +154,7 @@ class Room extends Component {
 
   handleNegotatiationNeededEvent = (event) => {
     const { socket } = this.props;
-    console.log('#3 Hegotiation needed is fired');
+    console.log('#3 Negotiation needed is fired');
     // key word this refer to certain peerConnection
     event.target.createOffer()
       .then(offer => {
@@ -196,15 +202,18 @@ class Room extends Component {
       case 'closed':
       case 'failed':
       case 'disconnected':
+        console.log('CLOSE CALL');
         this.closeVideoCall([event.target]);
         break;
+      default:
+        console.log('ICE Connection State: ', event.target.iceConnectionState);
     }
   }
   handleICEGatheringStateChangeEvent(event) {
-    console.log('ICE Gathering state change: ', event);
+    console.log('ICE Gathering state change: ', event.target.iceGatheringState);
   }
   handleSignalingStateChangeEvent(event) {
-    console.log('Signaling state change: ', event);
+    console.log('Signaling state change: ', event.target.signalingState);
   }
   getMediaStream = () => {
     console.log('#1 Get Media stream');
@@ -277,7 +286,6 @@ class Room extends Component {
       this.setState({streamer: null, peerConnections: []});
     } else {
       // TODO: don't create stream if nobody in room
-
       localVideo.style.display = 'block';
       // let callback = (peerConnections) => {
         // this.setState({streamer: user, peerConnections})
@@ -316,5 +324,5 @@ class Room extends Component {
   }
 }
 
-export default Room;
+export default withRouter(Room);
 
