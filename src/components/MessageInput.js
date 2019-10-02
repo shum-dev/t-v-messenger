@@ -17,7 +17,7 @@ export default class MessageInput extends Component {
   }
   render() {
     const { message } = this.state;
-    const { toggleStreaming, streamer, userId } = this.props;
+    const { toggleStreaming, streamer, userSocketId } = this.props;
     return (
         <Form inline
           onSubmit={ this.handleSubmit }
@@ -41,12 +41,12 @@ export default class MessageInput extends Component {
             </Button>
             <Button
               className='MessageInput-button-broadcast'
-              disabled = { streamer && streamer._id !== userId ? true : false }
-              color = { !streamer || streamer._id !== userId ? 'primary' : 'danger' }
+              disabled = { streamer && streamer !== userSocketId ? true : false }
+              color = { !streamer || streamer !== userSocketId ? 'primary' : 'danger' }
               onClick={toggleStreaming}
               type='button'
             >
-              { streamer && userId === streamer._id ? 'Stop' : 'Broadcast'}
+              { streamer && userSocketId === streamer ? 'Stop' : 'Broadcast'}
             </Button>
         </Form>
 

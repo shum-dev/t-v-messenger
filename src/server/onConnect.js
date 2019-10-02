@@ -16,14 +16,30 @@ const { VERIFY_USER, CREATE_NEW_ROOM, CREATE_NEW_MESSAGE,
   } catch(ignore){}
 }());
 
-let ROOMS_ACTIVITY;
+/*
+  activity register for keep track rooms activity
+  {
+    'room id': {
+      streamer: 'socketId'
+      usersOnline: Set{socketsId}
+    }
+  }
+*/
+let ROOMS_ACTIVITY = null;
+
+// clear ACTIVITY register every 24hr
+(function clearRegister(){
+  let millisecondsPerDay = 1000 * 60 * 60 * 24;
+  setInterval(() => {
+    ROOMS_ACTIVITY = null
+  }, millisecondsPerDay);
+}());
 
 module.exports = function(socket){
   console.log(`Socket ID: ${socket.id} connected!`);
 
   // initially fetch user data from DB
   socket.on(FETCH_USER_DATA, async (user, location, callback) => {
-    console.log('Location: ', location);
     try {
       let foundUser = await db.User.findOne({name: user}).populate({
         path: 'rooms',
@@ -36,7 +52,7 @@ module.exports = function(socket){
         populate: { path: 'users' }
       });
       if(foundUser){
-        // bind socket and user
+        // bind socket and user.id
         socket.userId = foundUser.id;
         // subscribe socket to existing rooms
         foundUser.rooms.forEach(room => {
@@ -66,16 +82,13 @@ module.exports = function(socket){
           path: 'rooms',
           populate: { path: 'users' }
         });
-        // if exist subscribe to all rooms in a list and bind socket and user ID
+        // if exist subscribe to all rooms that he know about and bind socket and user ID
       if(user){
-        // bind socket and user
-        console.log('There is such user in DB');
+        // bind socket and user.id
         socket.userId = user.id;
         let { rooms } = user;
         // subscribe socket to existing rooms
         rooms.forEach(item => {
-          console.log('Create subscription for room: ', item.id);
-
           socket.join(item.id);
         });
         callback({user, error: false});
@@ -147,7 +160,7 @@ module.exports = function(socket){
           path: 'user'
         }
       });
-      // broadcast to all subscribers about new created message in room
+      // broadcast to all subscribers about new created message in the room
       io.to(roomId).emit(ADD_NEW_MESSAGE, foundRoom);
     } catch(err) {
       console.log('Something went wrong in CREATE_NEW_MESSAGE: ', err);
@@ -214,15 +227,15 @@ module.exports = function(socket){
   });
 
   socket.on(JOIN_ROOM, ({ roomId }) => {
-    console.log('JOIN_ROOM fired: ');
-    // add new online user to the room
+    // check if there is ACTIVITY register and certain room into it...
     if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]){
+      //if current user already in the room do nothing
       if(ROOMS_ACTIVITY[roomId].usersOnline.has(socket.id)){
-        console.log('YOU ARE IN THE ROOM');
         return;
       }
+      // else add new online user to the room
       ROOMS_ACTIVITY[roomId].usersOnline.add(socket.id);
-    } else { // or create new room in ACTIVITY register
+    } else { // ... if not create new room in ACTIVITY register
       ROOMS_ACTIVITY = {
         ...ROOMS_ACTIVITY,
         [roomId]: {
@@ -232,32 +245,25 @@ module.exports = function(socket){
       }
     }
     // broadcast to all online subscribers in the room about new user online
-    // additionally send streamer too
+    // additionally send current streamer(null or user{}) to client
     let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
     onlineUsersArray.forEach(item => {
-      console.log('emit JOIN_ROOM for: ', item);
       io.to(item).emit(JOIN_ROOM, onlineUsersArray, ROOMS_ACTIVITY[roomId].streamer);
     });
-
+    // if there is a streamer in room
+    // tell streamer to create new connection for this user
     if(ROOMS_ACTIVITY[roomId].streamer) {
-      console.log('There is a streamer in the room.');
-      // tell the streamer to create ne connection for me
-      const streamerSocket = ROOMS_ACTIVITY[roomId].streamer.socketId;
-      io.to(streamerSocket).emit(STREAM_REQEST, socket.id);
+      const streamer = ROOMS_ACTIVITY[roomId].streamer;
+      io.to(streamer).emit(STREAM_REQEST, socket.id);
     }
   });
 
   socket.on(EXIT_ROOM, ({ roomId }) => {
     if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[roomId]) {
-
-      if(ROOMS_ACTIVITY[roomId].streamer)
-
       ROOMS_ACTIVITY[roomId].usersOnline.delete(socket.id);
-      console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
-      // broadcast to all Online subscribers in the room about user has been detachet
+      // broadcast to all Online subscribers in the room about user leave the room
       let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
       onlineUsersArray.forEach(item => {
-        console.log('emit EXIT_ROOM for: ', item);
         io.to(item).emit(EXIT_ROOM, onlineUsersArray);
       });
     }
@@ -266,7 +272,6 @@ module.exports = function(socket){
   socket.on(UNSUBSCRIBE, () => {
     let rooms = Object.keys(socket.rooms);
     let roomId;
-    console.log('Rooms socket leaves: ',rooms);
     // unsubscribe socket from all rooms but current socket
     rooms.forEach((item, i) => {
       if( item === socket.id) return;
@@ -278,16 +283,14 @@ module.exports = function(socket){
           roomId = key;
           let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
           // broadcast to all online subscribers in the room about user has stoped streaming
-          if(ROOMS_ACTIVITY[roomId].streamer && ROOMS_ACTIVITY[roomId].streamer._id === socket.userId ){
+          if(ROOMS_ACTIVITY[roomId].streamer && ROOMS_ACTIVITY[roomId].streamer === socket.id ){
             ROOMS_ACTIVITY[roomId].streamer = null;
             onlineUsersArray.forEach(item => {
-              console.log('emit "disconnect" for: ', item, ' and close STREAM');
               io.to(item).emit(STREAMING, null);
             });
           }
-          // broadcast to all online subscribers in the room about user has been detached
+          // broadcast to all online subscribers in the room about user leave the room
           onlineUsersArray.forEach(item => {
-            console.log('emit "disconnect" for: ', item);
             io.to(item).emit(EXIT_ROOM, onlineUsersArray);
           });
         }
@@ -304,7 +307,7 @@ module.exports = function(socket){
           roomId = key;
           let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
           // broadcast to all online subscribers in the room about user has stoped streaming
-          if(ROOMS_ACTIVITY[roomId].streamer && ROOMS_ACTIVITY[roomId].streamer._id === socket.userId ){
+          if(ROOMS_ACTIVITY[roomId].streamer && ROOMS_ACTIVITY[roomId].streamer === socket.id ){
             ROOMS_ACTIVITY[roomId].streamer = null;
             onlineUsersArray.forEach(item => {
               console.log('emit "disconnect" for: ', item, ' and close STREAM');
@@ -318,7 +321,6 @@ module.exports = function(socket){
           });
         }
       }
-      console.log('AFTER DELETE ROOMS_ACTIVITY is: ', ROOMS_ACTIVITY);
     }
   });
 
@@ -326,8 +328,7 @@ module.exports = function(socket){
   socket.on(SIGNAL, (message) =>{
     switch(message.type) {
       case 'video-offer':
-        console.log('Get a video offer:', message);
-        // sending private messages to target Socket
+        // send video offer in private messages to target Socket
         io.to(message.target).emit(SIGNAL, message);
         break;
       case 'answer':
@@ -346,28 +347,25 @@ module.exports = function(socket){
     if(!!streamer){
       if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[activeChatId]){
         let onlineUsersArray = Array.from(ROOMS_ACTIVITY[activeChatId].usersOnline);
-        ROOMS_ACTIVITY[activeChatId].streamer = {...streamer, socketId: socket.id};
+        ROOMS_ACTIVITY[activeChatId].streamer = streamer;
         onlineUsersArray.forEach(item => {
-          console.log('emit STREAM for: ', item);
           io.to(item).emit(STREAMING, streamer);
         });
       }
     } else {
-      // broadcast to all online subscribers about stream is closing
-      console.log('STREAM is closing');
+      // broadcast to all online subscribers about stream is closed
       if(ROOMS_ACTIVITY && ROOMS_ACTIVITY[activeChatId]){
         let onlineUsersArray = Array.from(ROOMS_ACTIVITY[activeChatId].usersOnline);
-        ROOMS_ACTIVITY[activeChatId].streamer = null; // set streamer to null
+        ROOMS_ACTIVITY[activeChatId].streamer = null; // reset streamer in ACTIVITY register
         onlineUsersArray.forEach(item => {
-          console.log('emit STREAM for: ', item);
           io.to(item).emit(STREAMING, null);
         });
       }
     }
   });
 
-  socket.on(CLOSE_CONNECTION, (targetSocket) => {
-    console.log('Server recieve CLOSE_CONNECTION: ', targetSocket);
+  // close certain connection. When consumer leave the room
+  socket.on(CLOSE_CONNECTION, targetSocket => {
     io.to(targetSocket).emit(CLOSE_CONNECTION, socket.id);
   });
 }
