@@ -5,7 +5,7 @@ import Messages from './Messages';
 import MessageInput from './MessageInput';
 import { JOIN_ROOM, EXIT_ROOM, STREAMING, SIGNAL, STREAM_REQEST, CLOSE_CONNECTION } from '../Events';
 
-// import { getMediaStream, closeVideoCall, createPeerConnections, handleTrackEvent } from '../webRTC';
+import { createPeerConnections, getMediaStream, closeVideoCall } from '../webRTC';
 
 import '../styles/Room.css';
 
@@ -45,7 +45,6 @@ class Room extends Component {
     socket.on(STREAMING, streamer => {
       this.setState({streamer});
       console.log('user: ', user, 'streamer: ', streamer);
-
       if(!streamer) {
         console.log('Close remote video');
         if (remoteVideo.srcObject) {
@@ -55,15 +54,16 @@ class Room extends Component {
           remoteVideo.style.display = 'none';
         }
         // display remote video canvas if current user !== streamer
-      } else if(socket.id !== streamer ) {
+      } else if(socket.id !== streamer) {
         remoteVideo.style.display = 'block';
       }
     });
 
     socket.on(STREAM_REQEST, remoteSocket => {
+      const { activeChat } = this.props;
       console.log('STREAM_REQ is fired!');
       console.log('Remote socket is: ', remoteSocket);
-      let peerConnection = this.createPeerConnections([remoteSocket])[0];
+      let peerConnection = createPeerConnections([remoteSocket], activeChat._id)[0];
       let localStream = localVideo.srcObject;
       console.log('localStream is: ', localStream);
       console.log('PeerConnection is: ', peerConnection);
@@ -78,10 +78,11 @@ class Room extends Component {
     });
 
     socket.on(SIGNAL, message => {
+      const { activeChat } = this.props;
       switch(message.type) {
         case 'video-offer':
           console.log('#5.1 Video offer is recieved from: ', message.owner);
-          peerConnection = this.createPeerConnections([message.owner])[0];
+          peerConnection = createPeerConnections([message.owner], activeChat._id, remoteVideo)[0];
           console.log('#6 Set remote description for new connection');
           peerConnection.setRemoteDescription(message.sdp)
           .then(() => {
@@ -134,7 +135,7 @@ class Room extends Component {
       const { peerConnections } = this.state;
       console.log('Streamer recieve CLOSE_CONNECTION from: ', socketId);
       const targetConnection = peerConnections.filter(connection => connection.targetSocket === socketId)[0];
-      this.closeVideoCall([targetConnection]);
+      closeVideoCall([targetConnection]);
         // remove closed connection from the state
       this.setState((prevState) => {
         const filteredConnections = prevState.peerConnections.filter(connection => {
@@ -156,7 +157,7 @@ class Room extends Component {
   }
   historyHandler = () => {
     const { streamer } = this.state;
-    const { user, socket } = this.props;
+    const { socket } = this.props;
     const { remoteVideo } = this.refs;
     // when streamer leave current url - end streaming
     if(streamer && streamer === socket.id) {
@@ -171,149 +172,10 @@ class Room extends Component {
         remoteVideo.removeAttribute("srcObject");
         remoteVideo.style.display = 'none';
       }
-      this.closeVideoCall([peerConnection]);
+      closeVideoCall([peerConnection]);
       socket.emit(CLOSE_CONNECTION, peerConnection.targetSocket);
       return;
     }
-  }
-  createPeerConnections = targetSockets => {
-    console.log('#1 Create Peer Conections');
-    let pConnections = [];
-    targetSockets.forEach((item, i) => {
-      let pc = new RTCPeerConnection({
-        iceServers: [
-          {
-            urls: 'stun:stun.l.google.com:19302'
-          }, {
-            urls: 'turn:numb.viagenie.ca',
-            username: 'webrtc@live.com',
-            credential: 'muazkh'
-          }
-        ]
-      });
-      pc.onicecandidate = this.handleICECandidateEvent;
-      pc.ontrack = this.handleTrackEvent;
-      pc.onnegotiationneeded = this.handleNegotatiationNeededEvent;
-      pc.onremovetrack = this.handleRemoveTrackEvent;
-      pc.oniceconnectionstatechange = this.handleICEConnectionStateChangeEvent;
-      pc.onicegatheringstatechange = this.handleICEGatheringStateChangeEvent;
-      pc.onsignalingstatechange = this.handleSignalingStateChangeEvent;
-      pc.targetSocket = item;
-      pConnections[i] = pc;
-    });
-    return pConnections;
-  }
-  handleNegotatiationNeededEvent = event => {
-    const { socket } = this.props;
-    console.log('#3 Negotiation needed is fired');
-    // key word this refer to certain peerConnection
-    event.target.createOffer()
-      .then(offer => {
-        console.log('#4 Set local description for: ', event.target.targetSocket);
-        return event.target.setLocalDescription(offer);
-      })
-      .then(() => {
-        console.log('#4.1 send offer from: ', socket.id, ' to: ', event.target.targetSocket);
-        socket.emit(SIGNAL, {
-          owner: socket.id,
-          target: event.target.targetSocket,
-          type: 'video-offer',
-          sdp: event.target.localDescription
-        })
-      })
-      .then(() => { // say to all about streamer (indetify by socket ID)
-        const { activeChat } = this.props;
-        socket.emit(STREAMING, socket.id, activeChat._id);
-      })
-      .catch(err => {
-        console.log('Error occure in createOffer(): ', err);
-      })
-  }
-  handleICECandidateEvent = event => {
-    const { socket } = this.props;
-    console.log('# Send Ice candidate from: ', socket.id, ' to: ', event.target.targetSocket);
-    if(event.candidate) {
-      socket.emit(SIGNAL, {
-        type: 'new-ice-candidate',
-        target: event.target.targetSocket,
-        candidate: event.candidate
-      });
-    }
-  }
-  handleTrackEvent = (event) => {
-    console.log('# Fire Track event');
-    this.refs.remoteVideo.srcObject = event.streams[0];
-  }
-  // this function just for debugging purpose
-  handleICEConnectionStateChangeEvent = event => {
-    console.log('ICE connection state change: ', event.target.iceGatheringState);
-    switch(event.target.iceConnectionState){
-      case 'closed':
-      case 'failed':
-      case 'disconnected':
-        console.log('CLOSE CALL');
-        break;
-      default: return;
-    }
-  }
-  // this function just for debugging purpose
-  handleICEGatheringStateChangeEvent(event) {
-    console.log('ICE Gathering state change: ', event.target.iceGatheringState);
-  }
-  // this function just for debugging purpose
-  handleSignalingStateChangeEvent(event) {
-    console.log('Signaling state change: ', event.target.signalingState);
-  }
-  // get stream from user device
-  getMediaStream = () => {
-    console.log('#2 Get Media stream');
-    const { localVideo } = this.refs;
-    const { peerConnections } = this.state;
-    navigator.mediaDevices.getUserMedia({
-      // audio: true,
-      video: true
-    })
-    .then(localStream => {
-      console.log('Adding local stream. Local stream is: ', localStream);
-      localVideo.srcObject = localStream;
-      // add local stream to all peer connections
-      localStream.getTracks().forEach(track => {
-        peerConnections.forEach(connection => connection.addTrack(track, localStream));
-      });
-    })
-    .catch(this.handleGetUserMediaError)
-  }
-  handleGetUserMediaError(err) {
-    const { peerConnections } = this.state;
-    switch(err.name) {
-      case "NotFoundError":
-        alert("Unable to open your call because no camera and/or microphone were found.");
-        break;
-      case "SecurityError":
-      case "PermissionDeniedError":
-        // Do nothing; this is the same as the user canceling the call.
-        break;
-      default:
-        alert("Error opening your camera and/or microphone: " + err.message);
-        break;
-    }
-    this.closeVideoCall(peerConnections);
-  }
-  closeVideoCall(peerConnections) {
-    console.log('Close videocall is invoked');
-    peerConnections.forEach(connection => {
-      console.log('Closing peer connection: ', connection);
-      connection.ontrack = null;
-      connection.onremovetrack = null;
-      connection.onremovestream = null;
-      connection.onicecandidate = null;
-      connection.oniceconnectionstatechange = null;
-      connection.onsignalingstatechange = null;
-      connection.onicegatheringstatechange = null;
-      connection.onnegotiationneeded = null;
-      connection.close();
-      connection = null;
-    });
   }
   toggleStreaming = () => {
     console.log('#ToggleStreaming');
@@ -329,7 +191,7 @@ class Room extends Component {
       localVideo.removeAttribute("src");
       localVideo.removeAttribute("srcObject");
       localVideo.style.display = 'none';
-      this.closeVideoCall(peerConnections);
+      closeVideoCall(peerConnections);
       socket.emit(STREAMING, null, activeChat._id);
       console.log('Set state to the null');
       return this.setState({streamer: null, peerConnections: []});
@@ -340,9 +202,9 @@ class Room extends Component {
       // start streaming process
     } else {
       localVideo.style.display = 'block';
-      let peerConnections = this.createPeerConnections(usersOnline);
+      let peerConnections = createPeerConnections(usersOnline, activeChat._id);
       this.setState({streamer: user, peerConnections}, () => {
-        this.getMediaStream();
+        getMediaStream(localVideo, peerConnections);
       });
     }
   }
