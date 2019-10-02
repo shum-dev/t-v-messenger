@@ -93,7 +93,7 @@ function handleSignalingStateChangeEvent(event) {
 function getMediaStream(localVideo, peerConnections) {
   console.log('#2 Get Media stream');
   navigator.mediaDevices.getUserMedia({
-    // audio: true,
+    audio: true,
     video: true
   })
   .then(localStream => {
