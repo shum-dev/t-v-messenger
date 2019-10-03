@@ -11,7 +11,7 @@ User can:
 On welcome page you need to log in. Just
 enter your nickname and you ready to go.
 <p align='center'>
-  <img src='images/welcome.png' width='400'/>
+  <img src='images/welcome.png' width='500'/>
 </p>
 
 ### Main Page
@@ -20,7 +20,7 @@ Here you can:
 * enter any room in the list
 * logs out
 <p align='center'>
-  <img src='images/main_page.png' width='400'/>
+  <img src='images/main_page.png' width='500'/>
 </p>
 
 ### The Rooms
@@ -32,16 +32,16 @@ When you inside of the room you can:
 **Invite new client to a chat room:**
 You can invite new users to a chat room. Just copy URL to the room and send to another user to invite him
 <p align='center'>
-  <img src='images/join_room1(1).png' width='400'/>
-  <img src='images/join_room2(1).png' width='400'/>
-  <img src='images/join_room3(1).png' width='400'/>
+  <img src='images/join_room1(1).png' width='500'/>
+  <img src='images/join_room2(1).png' width='500'/>
+  <img src='images/join_room3(1).png' width='500'/>
 </p>
 
 **broadcasting:**
 You can start video streaming from webcamera, so other participants of the chat room will recieve video and audio from your devises.
 
 <p align='center'>
-  <img src='images/broadcast_streamer1.png' width='400'/>
+  <img src='images/broadcast_streamer1.png' width='700'/>
 </p>
 
 ### Tech Stack & Technologies
