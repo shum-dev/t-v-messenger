@@ -38,7 +38,7 @@ You can invite new users to a chat room. Just copy URL to the room and send to a
 </p>
 
 **broadcasting:**
-You can start video streaming from webcamera, so other participants of the chat room will recieve video and audio from your devises.
+You can start video streaming from webcamera, so other participants of the chat room will recieve video and audio from your devices.
 
 <p align='center'>
   <img src='images/broadcast_streamer1.png' width='700'/>
