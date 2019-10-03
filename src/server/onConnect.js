@@ -306,13 +306,19 @@ module.exports = function(socket){
         if(ROOMS_ACTIVITY[key].usersOnline.delete(socket.id)) {
           roomId = key;
           let onlineUsersArray = Array.from(ROOMS_ACTIVITY[roomId].usersOnline);
-          // broadcast to all online subscribers in the room about user has stoped streaming
-          if(ROOMS_ACTIVITY[roomId].streamer && ROOMS_ACTIVITY[roomId].streamer === socket.id ){
-            ROOMS_ACTIVITY[roomId].streamer = null;
-            onlineUsersArray.forEach(item => {
-              console.log('emit "disconnect" for: ', item, ' and close STREAM');
-              io.to(item).emit(STREAMING, null);
-            });
+          if(ROOMS_ACTIVITY[roomId].streamer){
+            let streamer = ROOMS_ACTIVITY[roomId].streamer;
+            if(streamer === socket.id){
+              // broadcast to all online subscribers in the room about user has stoped streaming
+              ROOMS_ACTIVITY[roomId].streamer = null;
+              onlineUsersArray.forEach(item => {
+                console.log('emit "disconnect" for: ', item, ' and close STREAM');
+                io.to(item).emit(STREAMING, null);
+              });
+            } else {
+              // tell streamer to close certain connection. When consumer leave the room
+              io.to(streamer).emit(CLOSE_CONNECTION, socket.id);
+            }
           }
           // broadcast to all online subscribers in the room about user has been detached
           onlineUsersArray.forEach(item => {
