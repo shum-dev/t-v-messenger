@@ -1,5 +1,5 @@
-var app = require('http').createServer();
-var io = module.exports.io = require('socket.io')(app);
+const app = require('http').createServer();
+const io = module.exports.io = require('socket.io')(app);
 const onConnect = require('./onConnect');
 
 const PORT = process.env.PORT || 3231;
